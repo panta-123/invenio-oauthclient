@@ -1,7 +1,7 @@
 '''
 This module requires some settings configured in your instance configuration. invenio.cfg
 OAUTHCLIENT_REMOTE_APPS = {}  # configure external login providers
-from invenio_oauthclient.contrib import sdcc_openid as k
+from invenio_oauthclient.contrib import cilogon as k
 helper = k.cilogonOAuthSettingsHelper(
 title="My Organzation",
 description="Organization Comanage Registry",
@@ -64,5 +64,5 @@ __all__ = (
     "disconnect_rest_handler",
     "info_handler",
     "setup_handler",
-    "cilgonOAuthSettingsHelper",
+    "CilogonOAuthSettingsHelper",
 )
