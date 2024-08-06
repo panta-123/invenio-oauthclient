@@ -39,6 +39,11 @@ def info_serializer_handler(remote, resp, token_user_info, user_info=None, **kwa
         "preferred_username"
     )
     cilogonid = token_user_info.get("sub") or user_info.get("sub")
+    roles = token_user_info.get("roles") or user_info.get("roles")
+    if roles is None:
+        error_url = "https://www.sdcc.bnl.gov/registry-login-error.php?serviceid=eicinvenio&error=Access Denied&error_description=User doesn't have any roles"
+        #send_email_to_admin('', user_full_name, False)
+        return error_url
 
     return {
         "user": {
@@ -80,7 +85,7 @@ def setup_handler(remote, token, resp):
         user = token.remote_account.user
         external_id = {"id": cilogonid, "method": remote.name}
 
-        # link account with external Keycloak ID
+        # link account with external cilogon ID
         oauth_link_external_id(user, external_id)
 
 @require_more_than_one_external_account

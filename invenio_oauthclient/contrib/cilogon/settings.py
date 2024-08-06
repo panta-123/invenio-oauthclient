@@ -18,13 +18,12 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
                 signup_options=None,
                 jwks_url=None,
                 logout_url=None):
-        
         endpoints = self.getEndpoints(base_url)
         self._user_info_url = endpoints['user_info_url']
         self._jwks_url = endpoints['jwks_url']
         super().__init__(title=title,
-                         description=description,
-                         base_url=base_url,
+                         description=description or "CILOGON Comanage Registr",
+                         base_url=base_url or "https://cilogon.org/jlab",
                          app_key=app_key,
                          icon=icon,
                          access_token_url=access_token_url or endpoints['access_token_url'],

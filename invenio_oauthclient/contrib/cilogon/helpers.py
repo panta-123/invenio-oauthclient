@@ -68,7 +68,7 @@ def get_all_keys(remote,jwsurl):
 def _get_user_info_from_token(remote, token, config_prefix):
     """Get the user information from the JWT token."""
     jwsurl = current_app.config.get(f"{config_prefix}_JWKS_URL")
-    pubkeys = get_all_keys(remote=remote,jwsurl)
+    pubkeys = get_all_keys(remote=remote, jwsurl=jwsurl)
     # pubkey = _format_public_key(get_public_key(remote))
     alg = jwt.get_unverified_header(token)["alg"]
     try:
