@@ -44,19 +44,6 @@ def info_serializer_handler(remote, resp, token_user_info, user_info=None, **kwa
     #    error_url = "https://www.sdcc.bnl.gov/registry-login-error.php?serviceid=eicinvenio&error=Access Denied&error_description=User doesn't have any roles"
         #send_email_to_admin('', user_full_name, False)
     #    return error_url
-    info = {
-        "user": {
-            "active": True,
-            "email": email,
-            "profile": {
-                "full_name": full_name,
-                "username": username,
-            },
-        },
-        "external_id": cilogonid,
-        "external_method": remote.name,
-    }
-    print(info)
     return {
         "user": {
             "active": True,
@@ -78,9 +65,6 @@ def info_handler(remote, resp):
     :returns: A dictionary with the user information.
     """
     token_user_info, user_info = get_user_info(remote, resp)
-    print("info_handler\n")
-    print(token_user_info)
-
     handlers = current_oauthclient.signup_handlers[remote.name]
     # `remote` param automatically injected via `make_handler` helper
     return handlers["info_serializer"](resp, token_user_info, user_info)
@@ -92,8 +76,6 @@ def setup_handler(remote, token, resp):
     with db.session.begin_nested():
         # fetch the user's sdcc ID and set it in extra_data
         cilogonid = token_user_info["sub"]
-        print("setup_handler\n")
-        print(cilogonid)
         token.remote_account.extra_data = {
             "cilogonid": cilogonid,
         }
