@@ -63,6 +63,8 @@ def authorized_handler(resp, remote, *args, **kwargs):
 
     # call user info endpoint
     account_info = handlers["info"](resp)
+    print("authhorized_handler\n")
+    print(account_info)
     assert "external_id" in account_info
     account_info_received.send(remote, response=resp, account_info=account_info)
 
@@ -72,6 +74,7 @@ def authorized_handler(resp, remote, *args, **kwargs):
     if groups_handler:
         groups = groups_handler(resp)
         if groups:
+            print(groups)
             # preventively add/update Invenio roles based on the fetched user groups
             # (async), so that new groups are almost immediately searchable
             create_or_update_roles_task.delay(groups)

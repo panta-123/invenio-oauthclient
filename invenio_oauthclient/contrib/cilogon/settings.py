@@ -24,7 +24,7 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
         super().__init__(title=title,
                          description=description or "CILOGON Comanage Registr",
                          base_url=base_url or "https://cilogon.org/jlab",
-                         app_key=app_key,
+                         app_key=app_key or  "CILOGON_APP_CREDENTIALS",
                          icon=icon,
                          access_token_url=access_token_url or endpoints['access_token_url'],
                          authorize_url=authorize_url or endpoints['authorize_url'],

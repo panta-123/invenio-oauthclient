@@ -57,12 +57,12 @@ from .handlers import (
     info_handler,
     setup_handler,
 )
-from .settings import CilogonOAuthSettingsHelper
+from .settings import CilogonSettingsHelper
 
 __all__ = (
     "disconnect_handler",
     "disconnect_rest_handler",
     "info_handler",
     "setup_handler",
-    "CilogonOAuthSettingsHelper",
+    "CilogonSettingsHelper",
 )
