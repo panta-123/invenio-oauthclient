@@ -15,7 +15,7 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
                 request_token_params=None,
                 request_token_url=None,
                 precedence_mask=None,
-                signup_options=None,
+                signup_options={"auto_confirm": True, "send_register_msg": False,},
                 jwks_url=None,
                 logout_url=None):
         endpoints = self.getEndpoints(base_url)
@@ -29,7 +29,7 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
                          access_token_url=access_token_url or endpoints['access_token_url'],
                          authorize_url=authorize_url or endpoints['authorize_url'],
                          access_token_method=access_token_method or "POST",
-                         request_token_params=request_token_params or {"scope": "openid email org.cilogon.userinfo profile"},
+                         request_token_params=request_token_params or {"scope": "openid email org.cilogon.userinfo profile "},
                          request_token_url=request_token_url,
                          precedence_mask=precedence_mask,
                          signup_options=signup_options,
@@ -42,6 +42,8 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
                 info="invenio_oauthclient.contrib.cilogon.handlers:info_handler",
                 info_serializer="invenio_oauthclient.contrib.cilogon.handlers:info_serializer_handler",
                 setup="invenio_oauthclient.contrib.cilogon.handlers:setup_handler",
+                groups="invenio_oauthclient.contrib.cilogon.handlers:group_handler",
+                groups_serializer="invenio_oauthclient.contrib.cilogon.handlers:group_serializer_handler",
                 view="invenio_oauthclient.handlers:signup_handler",
             ),
         )
@@ -52,6 +54,8 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
                 info="invenio_oauthclient.contrib.cilogon.handlers:info_handler",
                 info_serializer="invenio_oauthclient.contrib.cilogon.handlers:info_serializer_handler",
                 setup="invenio_oauthclient.contrib.cilogon.handlers:setup_handler",
+                groups="invenio_oauthclient.contrib.cilogon.handlers:group_handler",
+                groups_serializer="invenio_oauthclient.contrib.cilogon.handlers:group_serializer_handler",
                 view="invenio_oauthclient.handlers.rest:signup_handler",
             ),
             response_handler=(
