@@ -13,8 +13,6 @@ from flask_principal import (
     AnonymousIdentity,
     RoleNeed,
     UserNeed,
-    identity_changed,
-    identity_loaded,
 )
 
 from invenio_oauthclient import current_oauthclient
@@ -28,9 +26,6 @@ from datetime import datetime
 from .helpers import get_user_info, _generate_config_prefix
 
 OAUTHCLIENT_CILOGON_SESSION_KEY = "identity.cilogon_provides"
-
-cilogon_oauth_blueprint = Blueprint("cilogon_oauth", __name__)
-
 
 def extend_identity(identity, roles):
     """Extend identity with roles based on CILOGON groups."""
