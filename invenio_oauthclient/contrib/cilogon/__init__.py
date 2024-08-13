@@ -25,8 +25,7 @@
         OAUTHCLIENT_CILOGON_USER_INFO_URL = helper.user_info_url
         OAUTHCLIENT_CILOGON_OPENID_CONFIG_URL = helper.base_url+'/.well-known/openid-configuration'
 
-        # Cilogon uses JWTs (https://jwt.io/) for their tokens, which
-        # contain information about the target audience (AUD) which is cilient_id by default. 
+        # CILOGON tokens, contains information about the target audience (AUD)
         # verification of the expected AUD value can be configured with:
         OAUTHCLIENT_CILOGON_OPENID_VERIFY_AUD = True
         OAUTHCLIENT_CILOGON_OPENID_AUD = "client audience"(same as client ID usually)
@@ -34,8 +33,18 @@
         # enable/disable checking if the JWT signature has expired
         OAUTHCLIENT_CILOGON_OPENID__VERIFY_EXP = True
 
+        # Cilogon role values (i.e. groups) that are allowed to be used
+        OAUTHCLIENT_CILOGON_ALLOWED_ROLES = '["CO:COU:eic:members:all"]' 
+        # error direct when user role/grup from cilogon doesn't match to allowed.
+        OAUTHCLIENT_CILOGON_ROLES_ERROR_URL = "/"
+
+        OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM = "isMemberOf"  (oidc claim name for LDAP Atrribute "isMemberOf". Default "isMemberOf")
+
         # add CILOGON as external login providers to the dictionary of remote apps
         OAUTHCLIENT_REMOTE_APPS = dict(
+        cilogon_openid=helper.remote_app,
+        )
+        OAUTHCLIENT_REST_REMOTE_APPS = dict(
         cilogon_openid=helper.remote_app,
         )
 

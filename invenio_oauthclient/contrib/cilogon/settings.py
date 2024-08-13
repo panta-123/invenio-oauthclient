@@ -55,7 +55,7 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
                 info_serializer="invenio_oauthclient.contrib.cilogon.handlers:info_serializer_handler",
                 setup="invenio_oauthclient.contrib.cilogon.handlers:setup_handler",
                 groups="invenio_oauthclient.contrib.cilogon.handlers:group_handler",
-                groups_serializer="invenio_oauthclient.contrib.cilogon.handlers:group_serializer_handler",
+                groups_serializer="invenio_oauthclient.contrib.cilogon.handlers:group_rest_serializer_handler",
                 view="invenio_oauthclient.handlers.rest:signup_handler",
             ),
             response_handler=(

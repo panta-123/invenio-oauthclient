@@ -5,13 +5,14 @@ import base64
 import jwt
 import six
 import struct
+from datetime import datetime
 
 from flask import current_app
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
 from cryptography.hazmat.backends import default_backend
-
+from invenio_oauthclient.errors import OAuthCilogonRejectedAccountError
 
 from ...errors import OAuthError
 
@@ -131,3 +132,46 @@ def get_user_info(remote, resp_token, from_token_only=False):
         from_endpoint = _get_user_info_from_endpoint(remote, config_prefix)
 
     return from_token, from_endpoint
+
+def filter_groups(remote, resp, groups):
+    """ Filter groups from local <config_prefix>_Allowed_ROLES.
+    :param remote: The remote application.
+    :param resp: The response of the `authorized` endpoint.
+    :param groups: List of groups to filter from <config_prefix>_ALLOWED_ROLES
+    :retruns: A List of matching groups.
+    """
+    config_prefix = _generate_config_prefix(remote)
+    valid_roles = current_app.config[f"{config_prefix}_ALLOWED_ROLES"]
+    matching_groups = [group for group in groups if group in valid_roles]
+    if not matching_groups:
+        # Return an error if no matching groups are found
+        raise OAuthCilogonRejectedAccountError(
+            "User roles/groups {0} are not one of allowed {1} roles/groups.".format(str(groups), str(valid_roles)),
+            remote,
+            {
+                "status_code": 401,
+                "error": {
+                    "type": "OAuthCilogonRejectedAccountError",
+                    "message": "User roles/groups {0} are not one of allowed {1} roles/groups.".format(str(groups), str(valid_roles)),
+                    "details": {
+                        "roles_provided": groups,
+                        "valid_roles": valid_roles
+                    }
+                }
+            }
+            )
+    return matching_groups
+
+def get_groups(remote, resp, account, group_names):
+    """ Get groups from filter_groups and add as account extra data.
+    :param remote: The remote application.
+    :param resp: The response of the `authorized` endpoint.
+    :param account: The remote application.
+    :param group_names: List of group names to filter from <config_prefix>_ALLOWED_ROLES.
+    :returns: A list of matching groups.
+    """
+ 
+    roles = filter_groups(remote, resp, group_names)
+    updated = datetime.utcnow()
+    account.extra_data.update(roles=roles, updated=updated.isoformat())
+    return roles

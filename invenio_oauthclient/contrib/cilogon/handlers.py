@@ -1,13 +1,7 @@
-# from .handlers import (
-#     disconnect_handler,
-#     disconnect_rest_handler,
-#     info_handler,
-#     setup_handler,
-# )
-
-from flask import Blueprint, session, g, flash, current_app, redirect, url_for
+from flask import session, g, flash, current_app, redirect, url_for, abort, make_response
 from flask_login import current_user
 from invenio_db import db
+from invenio_i18n import gettext as _
 
 from flask_principal import (
     AnonymousIdentity,
@@ -20,12 +14,12 @@ from invenio_oauthclient.handlers.rest import response_handler
 from invenio_oauthclient.handlers.utils import require_more_than_one_external_account
 from invenio_oauthclient.models import RemoteAccount
 from invenio_oauthclient.oauth import oauth_link_external_id, oauth_unlink_external_id
-from invenio_oauthclient.errors import OAuthClientUnAuthorized
+from invenio_oauthclient.errors import OAuthCilogonRejectedAccountError
 
-from datetime import datetime
-from .helpers import get_user_info, _generate_config_prefix
+from .helpers import get_user_info, get_groups, filter_groups
 
 OAUTHCLIENT_CILOGON_SESSION_KEY = "identity.cilogon_provides"
+OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM = "isMemberOf"
 
 def extend_identity(identity, roles):
     """Extend identity with roles based on CILOGON groups."""
@@ -67,48 +61,44 @@ def info_serializer_handler(remote, resp, token_user_info, user_info=None, **kwa
         "preferred_username"
     )
     cilogonid = token_user_info.get("sub") or user_info.get("sub")
+
+    # check for matching group
+    group_claim_name = current_app.config.get(
+        "OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM",
+        OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM,
+    )
+    group_names = token_user_info.get(group_claim_name) or user_info.get(group_claim_name)
+    filter_groups(remote, resp, group_names)
+    
     return {
-        "user": {
+            "user": {
             "active": True,
             "email": email,
             "profile": {
                 "full_name": full_name,
                 "username": username,
-            },
+                },
             "preferences": {
                 "visibility": "public",
                 "email_visibility": "public",
-            }
+            },
         },
         "external_id": cilogonid,
         "external_method": remote.name,
     }
 
-def filter_groups(remote, groups):
-    """ Filter groups from locall Allowed_ROLES.
-    :param remote: The remote application.
-    :param groups: List of groups to filter from <config_prefix>_ALLOWED_ROLES
-    :retruns: A List of matching groups.
-    """
-    config_prefix = _generate_config_prefix(remote)
-    valid_roles = current_app.config[f"{config_prefix}_ALLOWED_ROLES"]
-    matching_groups = [group for group in groups if group in valid_roles]
-    if not matching_groups:
-        # Return an error if no matching groups are found
-        raise OAuthClientUnAuthorized("User roles {0} are not one of {1}".format(str(groups), str(valid_roles)),
-        remote,
-        )
-    return matching_groups
 
-def get_groups(remote, account, group_names):
-    """ Get groups from filter_groups and add as account extra data.
+def info_handler(remote, resp):
+    """Retrieve remote account information for finding matching local users.
+
     :param remote: The remote application.
-    :param account: The remote application.
+    :param resp: The response of the `authorized` endpoint.
+    :returns: A dictionary with the user information.
     """
-    roles = filter_groups(remote, group_names)
-    updated = datetime.utcnow()
-    account.extra_data.update(roles=roles, updated=updated.isoformat())
-    return roles
+    token_user_info, user_info = get_user_info(remote, resp)
+    handlers = current_oauthclient.signup_handlers[remote.name]
+    # `remote` param automatically injected via `make_handler` helper
+    return handlers["info_serializer"](resp, token_user_info, user_info)
 
 def group_serializer_handler(remote, resp, token_user_info, user_info=None, **kwargs):
     """Retrieve remote account information for group for finding matching local groups.
@@ -118,19 +108,57 @@ def group_serializer_handler(remote, resp, token_user_info, user_info=None, **kw
     :returns: A dictionary with the user information.
     """
     user_info = user_info or {}  # prevent errors when accessing None.get(...)
-    group_names = token_user_info.get("isMemberOf") or user_info.get("isMemberOf")
-    # check for matching group
-    matching_groups = filter_groups(remote, group_names)
+    group_claim_name = current_app.config.get(
+        "OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM",
+        OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM,
+    )
+    group_names = token_user_info.get(group_claim_name) or user_info.get(group_claim_name)
     groups_dict_list = []
-    for group in matching_groups:
-        group_dict = {
-            "id" : group,
-            "name": group,
-            "description": "Group taken from CILOGON"
-            }
-        groups_dict_list.append(group_dict)
-    return groups_dict_list
+    # check for matching group
+    try:
+        matching_groups = filter_groups(remote, resp, group_names)
+        for group in matching_groups:
+            group_dict = {
+                "id" : group,
+                "name": group,
+                "description": ""
+                }
+            groups_dict_list.append(group_dict)
+        return groups_dict_list
 
+    except OAuthCilogonRejectedAccountError as e:
+        current_app.logger.warning(e.message, exc_info=False)
+        return groups_dict_list
+    
+def group_rest_serializer_handler(remote, resp, token_user_info, user_info=None, **kwargs):
+    """Retrieve remote account information for group for finding matching local groups.
+
+    :param remote: The remote application.
+    :param resp: The response of the `authorized` endpoint.
+    :returns: A dictionary with the user information.
+    """
+    user_info = user_info or {}  # prevent errors when accessing None.get(...)
+    group_claim_name = current_app.config.get(
+        "OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM",
+        OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM,
+    )
+    group_names = token_user_info.get(group_claim_name) or user_info.get(group_claim_name)
+    groups_dict_list = []
+    # check for matching group
+    try:
+        matching_groups = filter_groups(remote, resp, group_names)
+        for group in matching_groups:
+            group_dict = {
+                "id" : group,
+                "name": group,
+                "description": ""
+                }
+            groups_dict_list.append(group_dict)
+        return groups_dict_list
+
+    except OAuthCilogonRejectedAccountError as e:
+        current_app.logger.warning(e.message, exc_info=False)
+        return groups_dict_list
 
 def group_handler(remote, resp):
     """Retrieve remote account information for finding matching local users.
@@ -144,17 +172,6 @@ def group_handler(remote, resp):
     # `remote` param automatically injected via `make_handler` helper
     return handlers["groups_serializer"](resp, token_user_info, user_info)
 
-def info_handler(remote, resp):
-    """Retrieve remote account information for finding matching local users.
-
-    :param remote: The remote application.
-    :param resp: The response of the `authorized` endpoint.
-    :returns: A dictionary with the user information.
-    """
-    token_user_info, user_info = get_user_info(remote, resp)
-    handlers = current_oauthclient.signup_handlers[remote.name]
-    # `remote` param automatically injected via `make_handler` helper
-    return handlers["info_serializer"](resp, token_user_info, user_info)
 
 def setup_handler(remote, token, resp):
     """Perform additional setup after the user has been logged in."""
@@ -169,9 +186,13 @@ def setup_handler(remote, token, resp):
 
         user = token.remote_account.user
         external_id = {"id": cilogonid, "method": remote.name}
-        group_names = token_user_info.get("isMemberOf")
-
-        roles = get_groups(remote, token.remote_account, group_names)
+        
+        group_claim_name = current_app.config.get(
+            "OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM",
+            OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM,
+            )
+        group_names = token_user_info.get(group_claim_name)
+        roles = get_groups(remote, resp, token.remote_account, group_names)
         assert not isinstance(g.identity, AnonymousIdentity)
         extend_identity(g.identity, roles)
 
