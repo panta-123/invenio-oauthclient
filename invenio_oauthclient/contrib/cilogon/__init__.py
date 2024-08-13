@@ -16,7 +16,10 @@
         title="CILOGON JLAB",
         description="CILOGON Comanage Registry",
         base_url="https://cilogon.org/jlab",
+        precedence_mask={"email":True, "profile": {"username": False, "full_name": False, "affiliations": False}}
         )
+
+        # precendence mask is added and email is set to true so that user's email is taken from cilogon not from user input.
 
         # create the configuration for Keycloak
         # because the URLs usually follow a certain schema, the settings helper
@@ -38,6 +41,11 @@
         # error direct when user role/grup from cilogon doesn't match to allowed.
         OAUTHCLIENT_CILOGON_ROLES_ERROR_URL = "/"
 
+        # if you want to allow users from any group without check of allowed roles
+        # set the following to True
+        OAUTHCLIENT_CILOGON_ALLOW_ANY_ROLES=False
+
+
         OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM = "isMemberOf"  (oidc claim name for LDAP Atrribute "isMemberOf". Default "isMemberOf")
 
         # add CILOGON as external login providers to the dictionary of remote apps
@@ -45,7 +53,7 @@
         cilogon_openid=helper.remote_app,
         )
         OAUTHCLIENT_REST_REMOTE_APPS = dict(
-        cilogon_openid=helper.remote_app,
+        cilogon_openid=helper.remote_rest_app,
         )
 
         # set the following configuration to True to automatically use the

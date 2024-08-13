@@ -141,6 +141,9 @@ def filter_groups(remote, resp, groups):
     :retruns: A List of matching groups.
     """
     config_prefix = _generate_config_prefix(remote)
+    allow_any_groups = current_app.config.get(f"{config_prefix}_ALLOW_ANY_ROLES", False)
+    if allow_any_groups:
+        return []
     valid_roles = current_app.config[f"{config_prefix}_ALLOWED_ROLES"]
     matching_groups = [group for group in groups if group in valid_roles]
     if not matching_groups:
@@ -170,7 +173,6 @@ def get_groups(remote, resp, account, group_names):
     :param group_names: List of group names to filter from <config_prefix>_ALLOWED_ROLES.
     :returns: A list of matching groups.
     """
- 
     roles = filter_groups(remote, resp, group_names)
     updated = datetime.utcnow()
     account.extra_data.update(roles=roles, updated=updated.isoformat())

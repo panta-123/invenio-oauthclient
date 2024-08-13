@@ -1,7 +1,8 @@
-from flask import session, g, flash, current_app, redirect, url_for, abort, make_response
+from flask import session, g, current_app, redirect, url_for
 from flask_login import current_user
 from invenio_db import db
 from invenio_i18n import gettext as _
+
 
 from flask_principal import (
     AnonymousIdentity,
@@ -21,9 +22,13 @@ from .helpers import get_user_info, get_groups, filter_groups
 OAUTHCLIENT_CILOGON_SESSION_KEY = "identity.cilogon_provides"
 OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM = "isMemberOf"
 
+
 def extend_identity(identity, roles):
     """Extend identity with roles based on CILOGON groups."""
-    provides = set([UserNeed(current_user.email)] + [RoleNeed(name) for name in roles])
+    if not roles:
+        provides = set([UserNeed(current_user.email)])
+    else:
+        provides = set([UserNeed(current_user.email)] + [RoleNeed(name) for name in roles])
     identity.provides |= provides
     key = current_app.config.get(
         "OAUTHCLIENT_CILOGON_SESSION_KEY",
@@ -72,20 +77,20 @@ def info_serializer_handler(remote, resp, token_user_info, user_info=None, **kwa
     
     return {
             "user": {
-            "active": True,
-            "email": email,
-            "profile": {
-                "full_name": full_name,
-                "username": username,
+                "active": True,
+                "email": email,
+                "profile": {
+                    "full_name": full_name,
+                    "username": username,
+                    },
+                "prefs": {
+                    "visibility": "public",
+                    "email_visibility": "public",
+                    },
                 },
-            "preferences": {
-                "visibility": "public",
-                "email_visibility": "public",
-            },
-        },
-        "external_id": cilogonid,
-        "external_method": remote.name,
-    }
+            "external_id": cilogonid,
+            "external_method": remote.name,
+            }
 
 
 def info_handler(remote, resp):
