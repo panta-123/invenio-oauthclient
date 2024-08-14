@@ -83,10 +83,6 @@ def info_serializer_handler(remote, resp, token_user_info, user_info=None, **kwa
                     "full_name": full_name,
                     "username": username,
                     },
-                "prefs": {
-                    "visibility": "public",
-                    "email_visibility": "public",
-                    },
                 },
             "external_id": cilogonid,
             "external_method": remote.name,
