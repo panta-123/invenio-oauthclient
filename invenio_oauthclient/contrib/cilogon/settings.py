@@ -97,6 +97,11 @@ class CilogonSettingsHelper(OAuthSettingsHelper):
         """URL for the user info endpoint."""
         return self._user_info_url
 
+    @property
+    def jwks_url(self):
+        """URL for the jwks info endpoint"""
+        return self._jwks_url
+
     def get_handlers(self):
         """Return a dict with the auth handlers."""
         return self._handlers

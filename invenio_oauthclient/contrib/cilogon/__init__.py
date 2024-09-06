@@ -1,5 +1,6 @@
-""" Toolkit for creating remote apps that enable sign in/up with cilogon.
-1. Register you invenio instance to cilogon vi comanage registry and make sure it is configured appropriately,
+""" Toolkit for creating remote apps that enable sign in/up with cilogon.  This was originally adapted from the keycloak plugin by
+Robert Hancock of BNL. Anil Panta of JLAB  helped clean it up and added some code to convert CILogon groups to Invenio roles.
+1. Register you invenio instance to cilogon via comanage registry and make sure it is configured appropriately,
    like In your comnage, set the callabck URI as
    "https://myinveniohost.com/oauth/authorized/cilogon/".
    Make user to grab the *Client ID* and *Client Secret* 
@@ -13,28 +14,28 @@
         from invenio_oauthclient.contrib import cilogon 
 
         helper = cilogon.CilogonSettingsHelper(
-        title="CILOGON JLAB",
+        title="CILOGON",
         description="CILOGON Comanage Registry",
-        base_url="https://cilogon.org/jlab",
+        base_url="https://cilogon.org",
         precedence_mask={"email":True, "profile": {"username": False, "full_name": False, "affiliations": False}}
         )
 
         # precendence mask is added and email is set to true so that user's email is taken from cilogon not from user input.
 
-        # create the configuration for Keycloak
+        # create the configuration for cilogon
         # because the URLs usually follow a certain schema, the settings helper
         # can be used to more easily build the configuration values:
-        OAUTHCLIENT_CILOGON_USER_INFO_FROM_ENDPOINT = helper.user_info_url
         OAUTHCLIENT_CILOGON_USER_INFO_URL = helper.user_info_url
-        OAUTHCLIENT_CILOGON_OPENID_CONFIG_URL = helper.base_url+'/.well-known/openid-configuration'
+        OAUTHCLIENT_CILOGON_JWKS_URL = helper.jwks_url
+        OAUTHCLIENT_CILOGON_CONFIG_URL = helper.base_url+'/.well-known/openid-configuration'
 
         # CILOGON tokens, contains information about the target audience (AUD)
         # verification of the expected AUD value can be configured with:
-        OAUTHCLIENT_CILOGON_OPENID_VERIFY_AUD = True
-        OAUTHCLIENT_CILOGON_OPENID_AUD = "client audience"(same as client ID usually)
+        OAUTHCLIENT_CILOGON_VERIFY_AUD = True
+        OAUTHCLIENT_CILOGON_AUD = "client audience"(same as client ID usually)
 
         # enable/disable checking if the JWT signature has expired
-        OAUTHCLIENT_CILOGON_OPENID__VERIFY_EXP = True
+        OAUTHCLIENT_CILOGON_VERIFY_EXP = True
 
         # Cilogon role values (i.e. groups) that are allowed to be used
         OAUTHCLIENT_CILOGON_ALLOWED_ROLES = '["CO:COU:eic:members:all"]' 
@@ -45,15 +46,15 @@
         # set the following to True
         OAUTHCLIENT_CILOGON_ALLOW_ANY_ROLES=False
 
-
-        OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM = "isMemberOf"  (oidc claim name for LDAP Atrribute "isMemberOf". Default "isMemberOf")
+        # oidc claim name for LDAP Atrribute "isMemberOf". Default "isMemberOf")
+        OAUTHCLIENT_CILOGON_GROUP_OIDC_CLAIM = "isMemberOf"
 
         # add CILOGON as external login providers to the dictionary of remote apps
         OAUTHCLIENT_REMOTE_APPS = dict(
-        cilogon_openid=helper.remote_app,
+        cilogon=helper.remote_app,
         )
         OAUTHCLIENT_REST_REMOTE_APPS = dict(
-        cilogon_openid=helper.remote_rest_app,
+        cilogon=helper.remote_rest_app,
         )
 
         # set the following configuration to True to automatically use the
@@ -61,7 +62,7 @@
         USERPROFILES_EXTEND_SECURITY_FORMS = True
 
    By default, the title will be displayed as label for the login button,
-    for example ``Login with My organization``. The description will be
+    for example ``CILOGON``. The description will be
     displayed in the user account section.
 
 3. Grab the *Client ID* and *Client Secret* from the 
