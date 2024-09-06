@@ -1,9 +1,10 @@
 """ Toolkit for creating remote apps that enable sign in/up with cilogon.  This was originally adapted from the keycloak plugin by
 Robert Hancock of BNL. Anil Panta of JLAB  helped clean it up and added some code to convert CILogon groups to Invenio roles.
+
 1. Register you invenio instance to cilogon via comanage registry and make sure it is configured appropriately,
-   like In your comnage, set the callabck URI as
-   "https://myinveniohost.com/oauth/authorized/cilogon/".
-   Make user to grab the *Client ID* and *Client Secret* 
+   like In your comanage, set the callabck URI as
+   "https://myinveniohost/oauth/authorized/cilogon/".
+   Make sure to grab the *Client ID* and *Client Secret* 
 
 2. Add the following items to your configuration (``invenio.cfg``).
    The ``CilogonSettingsHelper`` class can be used to help with setting up
