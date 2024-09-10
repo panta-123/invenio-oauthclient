@@ -60,7 +60,7 @@ def info_serializer_handler(remote, resp, token_user_info, user_info=None, **kwa
 
     user_info = user_info or {}  # prevent errors when accessing None.get(...)
 
-    email = token_user_info.get("email") or user_info["email"]
+    email = token_user_info.get("email") or user_info.get("email")
     full_name = token_user_info.get("name") or user_info.get("name")
     username = token_user_info.get("preferred_username") or user_info.get(
         "preferred_username"
@@ -74,7 +74,6 @@ def info_serializer_handler(remote, resp, token_user_info, user_info=None, **kwa
     )
     group_names = token_user_info.get(group_claim_name) or user_info.get(group_claim_name)
     filter_groups(remote, resp, group_names)
-    
     return {
             "user": {
                 "active": True,

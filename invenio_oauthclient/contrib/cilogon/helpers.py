@@ -5,7 +5,7 @@ import base64
 import jwt
 import six
 import struct
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import current_app
 
@@ -59,7 +59,7 @@ def jwks2pem(jwks):
         pems[alg] = pem
     return pems
 
-def get_all_keys(remote,jwsurl):
+def get_all_keys(remote, jwsurl):
     keys = remote.get(jwsurl).data
     try:
         return jwks2pem(keys)
@@ -174,6 +174,6 @@ def get_groups(remote, resp, account, group_names):
     :returns: A list of matching groups.
     """
     roles = filter_groups(remote, resp, group_names)
-    updated = datetime.utcnow()
+    updated = datetime.now(timezone.utc)
     account.extra_data.update(roles=roles, updated=updated.isoformat())
     return roles
