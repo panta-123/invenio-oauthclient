@@ -2,9 +2,12 @@
 Robert Hancock of BNL. Anil Panta of JLAB  helped clean it up and added some code to convert CILogon groups to Invenio roles.
 
 1. Register you invenio instance to cilogon via comanage registry and make sure it is configured appropriately,
-   like In your comanage, set the callabck URI as
+   like in your comanage registry, set the callabck URI as
    "https://myinveniohost/oauth/authorized/cilogon/".
-   Make sure to grab the *Client ID* and *Client Secret* 
+   Make sure to grab the *Client ID* and *Client Secret* . 
+   Minimum scope/claim should be "openid", "email", "org.cilogon.userinfo", "profile".
+   If you want allow certain group from cilogon to login you need to enable clain "isMemberOf".
+
 
 2. Add the following items to your configuration (``invenio.cfg``).
    The ``CilogonSettingsHelper`` class can be used to help with setting up
@@ -44,7 +47,7 @@ Robert Hancock of BNL. Anil Panta of JLAB  helped clean it up and added some cod
         OAUTHCLIENT_CILOGON_ROLES_ERROR_URL = "/"
 
         # if you want to allow users from any group without check of allowed roles
-        # set the following to True
+        # set the following to True (default is False)
         OAUTHCLIENT_CILOGON_ALLOW_ANY_ROLES=False
 
         # oidc claim name for LDAP Atrribute "isMemberOf". Default "isMemberOf")
