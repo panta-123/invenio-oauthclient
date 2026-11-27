@@ -17,6 +17,14 @@ from ...errors import OAuthError
 
 AZ_09_DASHES_UNDERSCORES = r"^[A-Za-z0-9_-]+$"
 
+DEFAULT_JWKS_URL = "https://cilogon.org:443/oauth2/certs/jlab"
+"""Fallback JWKS endpoint.
+
+Used only when ``<config_prefix>_JWKS_URL`` is unset, which happens when
+``CilogonSettingsHelper`` could not reach the OIDC discovery document and
+left ``jwks_url`` as ``None``.
+"""
+
 
 def is_app_name_valid(app_name):
     """Validate app name."""
@@ -63,16 +71,24 @@ def jwks2pem(jwks):
 
 
 def get_all_keys(remote, jwsurl):
-    keys = remote.get(jwsurl).data
+    """Fetch the JWKS document and convert it to a {kid: PEM} mapping."""
     try:
+        keys = remote.get(jwsurl).data
         return jwks2pem(keys)
-    except Exception as e:
+    except Exception:
+        current_app.logger.exception(f"Could not fetch or parse JWKS from {jwsurl}")
         return {}
 
 
 def _get_user_info_from_token(remote, token, config_prefix):
     """Get the user information from the JWT token."""
-    jwsurl = "https://cilogon.org:443/oauth2/certs/jlab"  # current_app.config.get(f"{config_prefix}_JWKS_URL")
+    jwsurl = current_app.config.get(f"{config_prefix}_JWKS_URL")
+    if not jwsurl:
+        current_app.logger.warning(
+            f"{config_prefix}_JWKS_URL is not set (OIDC discovery may have "
+            f"failed); falling back to {DEFAULT_JWKS_URL}"
+        )
+        jwsurl = DEFAULT_JWKS_URL
     pubkeys = get_all_keys(remote=remote, jwsurl=jwsurl)
     # pubkey = _format_public_key(get_public_key(remote))
     header = jwt.get_unverified_header(token)
@@ -83,7 +99,7 @@ def _get_user_info_from_token(remote, token, config_prefix):
         current_app.logger.error(
             f"No key matched. kid={kid} alg={alg} available={list(pubkeys)}"
         )
-        return None
+        return {}
 
     should_verify_aud = current_app.config.get(f"{config_prefix}_VERIFY_AUD", False)
     expected_aud = current_app.config.get(f"{config_prefix}_AUD", None)
@@ -140,8 +156,7 @@ def get_user_info(remote, resp_token, from_token_only=False):
     if not from_token_only and call_endpoint:
         from_endpoint = _get_user_info_from_endpoint(remote, config_prefix)
 
-    return from_token, from_endpoint
-    # return from_token or {}, from_endpoint
+    return from_token or {}, from_endpoint
 
 
 def filter_groups(remote, resp, groups):

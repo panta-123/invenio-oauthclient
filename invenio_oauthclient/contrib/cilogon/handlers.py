@@ -10,7 +10,10 @@ from flask_principal import (
 from invenio_db import db
 from invenio_i18n import gettext as _
 from invenio_oauthclient import current_oauthclient
-from invenio_oauthclient.errors import OAuthCilogonRejectedAccountError
+from invenio_oauthclient.errors import (
+    OAuthCilogonRejectedAccountError,
+    OAuthError,
+)
 from invenio_oauthclient.handlers.rest import response_handler
 from invenio_oauthclient.handlers.utils import require_more_than_one_external_account
 from invenio_oauthclient.models import RemoteAccount
@@ -225,7 +228,15 @@ def setup_handler(remote, token, resp):
 
     with db.session.begin_nested():
         # fetch the user's cilogon ID (sub) and set it in extra_data
-        cilogonid = token_user_info["sub"]
+        cilogonid = token_user_info.get("sub")
+        if not cilogonid:
+            # Reached when the id_token could not be verified at all, e.g. the
+            # JWKS endpoint was unreachable or the signing key had rotated.
+            raise OAuthError(
+                "No verified subject ('sub') in the CILogon id_token; "
+                "cannot set up the account.",
+                remote,
+            )
         token.remote_account.extra_data = {
             "cilogonid": cilogonid,
         }

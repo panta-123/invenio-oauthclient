@@ -354,7 +354,7 @@ def test_authorized_already_authenticated(
         c.get(url_for("invenio_oauthclient.login", remote_app="cilogon"))
 
         # mock a running cilogon instance
-        mock_cilogon(
+        patcher = mock_cilogon(
             app.config,
             example_cilogon_token,
             example_cilogon_userinfo,
@@ -395,3 +395,114 @@ def test_authorized_already_authenticated(
             method="cilogon", id_user=u.id, id=example_cilogon["sub"]
         ).count()
         assert count == 0
+        patcher.stop()
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
+# JWKS resolution: the endpoint must stay configurable, and a key that cannot #
+# be resolved must degrade cleanly instead of handing back None.              #
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
+
+
+class _FakeResp:
+    """Minimal stand-in for an OAuth remote response."""
+
+    def __init__(self, data):
+        self.data = data
+
+
+class _FakeRemote:
+    """Records the URLs it was asked to fetch."""
+
+    name = "cilogon"
+
+    def __init__(self, data=None, raises=False):
+        self._data = data if data is not None else {"keys": []}
+        self._raises = raises
+        self.requested = []
+
+    def get(self, url):
+        self.requested.append(url)
+        if self._raises:
+            raise RuntimeError("JWKS endpoint unreachable")
+        return _FakeResp(self._data)
+
+
+def _unverifiable_token():
+    return jwt.encode({"sub": "someone"}, "secret", algorithm="HS256")
+
+
+def test_jwks_url_comes_from_config(app):
+    """The JWKS endpoint must be read from config, not hardcoded."""
+    from invenio_oauthclient.contrib.cilogon.helpers import (
+        _get_user_info_from_token,
+    )
+
+    app.config["OAUTHCLIENT_CILOGON_JWKS_URL"] = "https://example.org/jwks"
+    remote = _FakeRemote()
+
+    with app.test_request_context():
+        result = _get_user_info_from_token(
+            remote, _unverifiable_token(), "OAUTHCLIENT_CILOGON"
+        )
+
+    assert remote.requested == ["https://example.org/jwks"]
+    # No key matched, so an empty mapping - never None, which callers would
+    # then call .get() on.
+    assert result == {}
+
+
+def test_jwks_url_falls_back_when_unset(app):
+    """With no configured URL (failed OIDC discovery), use the default."""
+    from invenio_oauthclient.contrib.cilogon.helpers import (
+        DEFAULT_JWKS_URL,
+        _get_user_info_from_token,
+    )
+
+    app.config["OAUTHCLIENT_CILOGON_JWKS_URL"] = None
+    remote = _FakeRemote()
+
+    with app.test_request_context():
+        _get_user_info_from_token(
+            remote, _unverifiable_token(), "OAUTHCLIENT_CILOGON"
+        )
+
+    assert remote.requested == [DEFAULT_JWKS_URL]
+
+
+def test_get_all_keys_returns_empty_on_failure(app):
+    """A broken JWKS endpoint yields no keys rather than propagating."""
+    remote = _FakeRemote(raises=True)
+
+    with app.test_request_context():
+        assert get_all_keys(remote, "https://example.org/jwks") == {}
+
+
+def test_get_user_info_never_returns_none(app, example_cilogon_token):
+    """An unverifiable id_token gives an empty dict, not None."""
+    app.config["OAUTHCLIENT_CILOGON_JWKS_URL"] = "https://example.org/jwks"
+    remote = _FakeRemote()
+
+    with app.test_request_context():
+        from_token, _ = get_user_info(
+            remote,
+            {"id_token": _unverifiable_token()},
+            from_token_only=True,
+        )
+
+    assert from_token == {}
+
+
+def test_setup_handler_without_subject_raises(app, monkeypatch):
+    """A token with no verified 'sub' is an explicit error, not a KeyError."""
+    from invenio_oauthclient.contrib.cilogon import handlers as cilogon_handlers
+
+    monkeypatch.setattr(
+        cilogon_handlers, "get_user_info", lambda *a, **kw: ({}, None)
+    )
+
+    with app.test_request_context():
+        with pytest.raises(OAuthError) as exc:
+            cilogon_handlers.setup_handler(_FakeRemote(), object(), {})
+
+    assert "sub" in str(exc.value.message)
