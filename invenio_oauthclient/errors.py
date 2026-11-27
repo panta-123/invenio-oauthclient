@@ -68,6 +68,9 @@ class OAuthCERNRejectedAccountError(OAuthResponseError):
 class OAuthKeycloakUserInfoError(OAuthResponseError):
     """Define exception for problems while fetching user info from Keycloak."""
 
+class OAuthCilogonRejectedAccountError(OAuthResponseError):
+    """Define exception for not allowed CILogon accounts."""
+
 
 class OAuthClientUnAuthorized(Exception):
     """Define exception for unauthorized user."""
